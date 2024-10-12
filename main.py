@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 from pyboy import PyBoy
-from pyboy.utils import WindowEvent
 
 # Initialize PyBoy with the selected ROM
 rom_path = 'roms/Super Mario Land (World) (Rev A).gb'
@@ -22,16 +21,6 @@ assert mario.time_left == 400
 assert mario.world == (1, 1)
 last_time = mario.time_left
 
-buttons = {
-    GBButton.RIGHT: False,
-    GBButton.LEFT: False,
-    GBButton.A: False,
-    GBButton.B: False,
-    GBButton.SELECT: False,
-    GBButton.START: False,
-    GBButton.UP: False,
-    GBButton.DOWN: False,
-}
 
 
 print(mario)
@@ -71,8 +60,8 @@ print(mario)
 try:
     while pyboy.tick():
         # Always hold down the RIGHT and B buttons to run right
-        buttons[GBButton.RIGHT] = True
-        buttons[GBButton.B] = True  # Hold B to run
+        pyboy.button('right')
+        pyboy.button('b')
 
         # Get Mario's current position
         mario_x, mario_y = mario.mario_sprite_position()
@@ -86,16 +75,8 @@ try:
 
         # If there's an obstacle, press the A button to jump
         if obstacle_ahead:
-            buttons[GBButton.A] = True
-        else:
-            buttons[GBButton.A] = False
+            pyboy.button('a', 5)  # Hold 'a' for 5 ticks to perform a jump
 
-        # Send the button inputs to PyBoy
-        for button, pressed in buttons.items():
-            if pressed:
-                pyboy.send_input(button)
-            else:
-                pyboy.release_input(button)
 except KeyboardInterrupt:
     print("Emulation interrupted by user.")
 finally:

@@ -74,14 +74,14 @@ try:
         buttons[GBButton.B] = True  # Hold B to run
 
         # Get Mario's current position
-        mario_x, mario_y = mario.position
+        mario_x, mario_y = mario.mario_sprite_position()
 
-        # Check for obstacles ahead
-        # For example, check tiles one space ahead and at Mario's height and slightly below
-        obstacle_ahead = (
-            mario.get_tile_at_pixel(mario_x + 16, mario_y) != 0 or
-            mario.get_tile_at_pixel(mario_x + 16, mario_y + 16) != 0
-        )
+        # Convert pixel positions to tile positions
+        tile_x = (mario_x + 8) // 8  # Look one tile ahead
+        tile_y = mario_y // 8
+
+        # Check for solid tiles ahead
+        obstacle_ahead = mario.tile_at(tile_x, tile_y) != 0
 
         # If there's an obstacle, press the A button to jump
         if obstacle_ahead:

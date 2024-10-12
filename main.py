@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-from pyboy import PyBoy, WindowEvent, GBButton
+from pyboy import PyBoy
+from pyboy.utils import WindowEvent
 
 # Initialize PyBoy with the selected ROM
 rom_path = 'roms/Super Mario Land (World) (Rev A).gb'

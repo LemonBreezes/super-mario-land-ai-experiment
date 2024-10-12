@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from pyboy import PyBoy
+from pyboy import PyBoy, WindowEvent, GBButton
 
 # Initialize PyBoy with the selected ROM
 rom_path = 'roms/Super Mario Land (World) (Rev A).gb'
@@ -21,8 +21,17 @@ assert mario.time_left == 400
 assert mario.world == (1, 1)
 last_time = mario.time_left
 
-pyboy.tick() # To render screen after `.start_game`
-pyboy.screen.image.save('SuperMarioLand1.png')
+buttons = {
+    GBButton.RIGHT: False,
+    GBButton.LEFT: False,
+    GBButton.A: False,
+    GBButton.B: False,
+    GBButton.SELECT: False,
+    GBButton.START: False,
+    GBButton.UP: False,
+    GBButton.DOWN: False,
+}
+
 
 print(mario)
 # Output:
@@ -59,8 +68,33 @@ print(mario)
 
 # Main emulation loop
 try:
-    while pyboy.tick():
-        pass
+    while not pyboy.tick():
+        # Always hold down the RIGHT and B buttons to run right
+        buttons[GBButton.RIGHT] = True
+        buttons[GBButton.B] = True  # Hold B to run
+
+        # Get Mario's current position
+        mario_x, mario_y = mario.position
+
+        # Check for obstacles ahead
+        # For example, check tiles one space ahead and at Mario's height and slightly below
+        obstacle_ahead = (
+            mario.get_tile_at_pixel(mario_x + 16, mario_y) != 0 or
+            mario.get_tile_at_pixel(mario_x + 16, mario_y + 16) != 0
+        )
+
+        # If there's an obstacle, press the A button to jump
+        if obstacle_ahead:
+            buttons[GBButton.A] = True
+        else:
+            buttons[GBButton.A] = False
+
+        # Send the button inputs to PyBoy
+        for button, pressed in buttons.items():
+            if pressed:
+                pyboy.send_input(button)
+            else:
+                pyboy.release_input(button)
 except KeyboardInterrupt:
     print("Emulation interrupted by user.")
 finally:

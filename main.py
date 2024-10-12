@@ -68,7 +68,7 @@ print(mario)
 
 # Main emulation loop
 try:
-    while not pyboy.tick():
+    while pyboy.tick():
         # Always hold down the RIGHT and B buttons to run right
         buttons[GBButton.RIGHT] = True
         buttons[GBButton.B] = True  # Hold B to run

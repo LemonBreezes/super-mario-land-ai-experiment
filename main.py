@@ -38,12 +38,11 @@ if not rom_path:
     exit()
 
 if args.mode == 'play':
-    pyboy = PyBoy(rom_path, sound=False, window_type="SDL2")
+    pyboy = PyBoy(rom_path, sound=False, window="SDL2")
     pyboy.set_emulation_speed(1)  # Normal speed
 else:
-    pyboy = PyBoy(rom_path, sound=False, window_type="headless")
+    pyboy = PyBoy(rom_path, sound=False, window="null")
     pyboy.set_emulation_speed(0)  # Maximum speed
-pyboy.set_emulation_speed(0)  # Maximum speed
 
 mario = pyboy.game_wrapper
 assert pyboy.cartridge_title == "SUPER MARIOLAN"
@@ -132,12 +131,9 @@ try:
 
         action = action_space[action_index]
 
-        # Release all buttons before pressing new ones
-        pyboy.send_input(pyboy.buttons.BUTTONS['RELEASE'])
-
         # Press the selected buttons
         for btn in action:
-            pyboy.send_input(pyboy.buttons.BUTTONS[btn.upper()])
+            pyboy.button(btn)
 
         # Advance the game to see the effect of the action
         pyboy.tick(5)
@@ -165,12 +161,9 @@ try:
         # Check for game over and reset if necessary
         if mario.lives_left < 0:
             # Reset the game
-            pyboy.send_input(pyboy.buttons.START)
-            for _ in range(50):
-                pyboy.tick()
+            mario.reset_game()
             state = get_state(mario)
             previous_fitness = fitness_function(mario)
-
 except KeyboardInterrupt:
     print("Emulation interrupted by user.")
 finally:

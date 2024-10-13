@@ -21,9 +21,7 @@ assert mario.time_left == 400
 assert mario.world == (1, 1)
 last_time = mario.time_left
 
-
-
-print(mario)
+# print(mario)
 # Output:
 # Super Mario Land: World 1-1
 # Coins: 0
@@ -56,26 +54,22 @@ print(mario)
 # 14 |  10  10  10  10  10  10  10  10  10  10  10  10  10  10  10  10  10  10  10  10
 # 15 |  10  10  10  10  10  10  10  10  10  10  10  10  10  10  10  10  10  10  10  10
 
+action_space = [
+    [],                          # No action
+    ['right'],                   # Move right
+    ['a'],                       # Jump
+    ['right', 'a'],              # Move right and jump
+    ['right', 'b'],              # Run right
+    ['right', 'b', 'a'],         # Run right and jump
+]
+
+def fitness_function(mario):
+    return mario.level_progress + mario.time_left + mario.world[0] * 1000 + mario.world.y[1] * 100 + mario.lives_left * 1000
+
 # Main emulation loop
 try:
     while pyboy.tick():
-        # Always hold down the RIGHT and B buttons to run right
-        pyboy.button('right')
-        pyboy.button('b')
-
-        # Get Mario's current position
-        mario_x, mario_y = mario.mario_sprite_position()
-
-        # Convert pixel positions to tile positions
-        tile_x = (mario_x + 8) // 8  # Look one tile ahead
-        tile_y = mario_y // 8
-
-        # Check for solid tiles ahead
-        obstacle_ahead = mario.tile_at(tile_x, tile_y) != 0
-
-        # If there's an obstacle, press the A button to jump
-        if obstacle_ahead:
-            pyboy.button('a', 5)  # Hold 'a' for 5 ticks to perform a jump
+        pass
 
 except KeyboardInterrupt:
     print("Emulation interrupted by user.")

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import argparse
 
 from pyboy import PyBoy
 import random
@@ -7,13 +8,21 @@ random.seed()
 np.random.seed()
 import pickle
 
+parser = argparse.ArgumentParser(description='Super Mario Land AI')
+parser.add_argument('--mode', choices=['train', 'play'], default='train', help='Mode to run the script: train or play')
+args = parser.parse_args()
+
 # Initialize PyBoy with the selected ROM
 Q_table = {}
 try:
     with open('q_table.pkl', 'rb') as f:
         Q_table = pickle.load(f)
 except FileNotFoundError:
-    Q_table = {}
+    if args.mode == 'play':
+        print("No trained Q-table found. Please train the model before playing.")
+        exit()
+    else:
+        Q_table = {}
 alpha = 0.1             # Learning rate
 gamma = 0.9             # Discount factor
 epsilon = 0.1           # Exploration rate (for epsilon-greedy policy)
@@ -23,7 +32,12 @@ rom_path = 'roms/Super Mario Land (World) (Rev A).gb'
 if not rom_path:
     exit()
 
-pyboy = PyBoy(rom_path, sound=False)
+if args.mode == 'play':
+    pyboy = PyBoy(rom_path, sound=False, window_type="SDL2")
+    pyboy.set_emulation_speed(1)  # Normal speed
+else:
+    pyboy = PyBoy(rom_path, sound=False, window_type="headless")
+    pyboy.set_emulation_speed(0)  # Maximum speed
 pyboy.set_emulation_speed(0)  # Maximum speed
 
 mario = pyboy.game_wrapper
@@ -113,9 +127,12 @@ try:
 
         action = action_space[action_index]
 
+        # Release all buttons before pressing new ones
+        pyboy.send_input(pyboy.buttons.BUTTONS['RELEASE'])
+
         # Press the selected buttons
         for btn in action:
-            pyboy.button(btn)
+            pyboy.send_input(pyboy.buttons.BUTTONS[btn.upper()])
 
         # Advance the game to see the effect of the action
         pyboy.tick(5)
@@ -126,17 +143,19 @@ try:
         reward = current_fitness - previous_fitness
         previous_fitness = current_fitness
 
-        # Update Q-table using the Q-learning formula
-        old_value = Q_table.get((state, action_index), 0)
-        next_max = max([Q_table.get((next_state, a), 0) for a in range(len(action_space))], default=0)
-        new_value = old_value + alpha * (reward + gamma * next_max - old_value)
-        Q_table[(state, action_index)] = new_value
+        if args.mode == 'train':
+            # Update Q-table using the Q-learning formula
+            old_value = Q_table.get((state, action_index), 0)
+            next_max = max([Q_table.get((next_state, a), 0) for a in range(len(action_space))], default=0)
+            new_value = old_value + alpha * (reward + gamma * next_max - old_value)
+            Q_table[(state, action_index)] = new_value
 
         # Update state
         state = next_state
 
         # Decay epsilon
-        epsilon = max(epsilon_min, epsilon * epsilon_decay)
+        if args.mode == 'train':
+            epsilon = max(epsilon_min, epsilon * epsilon_decay)
 
         # Check for game over and reset if necessary
         if mario.lives_left < 0:
@@ -150,7 +169,8 @@ try:
 except KeyboardInterrupt:
     print("Emulation interrupted by user.")
 finally:
-    # Save Q-table
-    with open('q_table.pkl', 'wb') as f:
-        pickle.dump(Q_table, f)
+    if args.mode == 'train':
+        # Save Q-table
+        with open('q_table.pkl', 'wb') as f:
+            pickle.dump(Q_table, f)
     pyboy.stop()

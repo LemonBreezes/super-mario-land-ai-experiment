@@ -8,17 +8,31 @@ random.seed()
 np.random.seed()
 import pickle
 import signal
-import multiprocessing
-from multiprocessing import Manager
 
 parser = argparse.ArgumentParser(description='Super Mario Land AI')
 parser.add_argument('--mode', choices=['train', 'play'], default='train', help='Mode to run the script: train or play')
 args = parser.parse_args()
 
+def signal_handler(sig, frame):
+    print("Emulation interrupted by user.")
+    if args.mode == 'train':
+        with open('q_table.pkl', 'wb') as f:
+            pickle.dump(Q_table, f)
+    pyboy.stop()
+    exit(0)
 
 # Initialize PyBoy with the selected ROM
-manager = Manager()
-Q_table = manager.dict()
+Q_table = {}
+try:
+    signal.signal(signal.SIGINT, signal_handler)
+    with open('q_table.pkl', 'rb') as f:
+        Q_table = pickle.load(f)
+except FileNotFoundError:
+    if args.mode == 'play':
+        print("No trained Q-table found. Please train the model before playing.")
+        exit()
+    else:
+        Q_table = {}
 alpha = 0.1             # Learning rate
 gamma = 0.9             # Discount factor
 epsilon = 0.1           # Exploration rate (for epsilon-greedy policy)
@@ -50,93 +64,6 @@ assert mario.lives_left == 2
 assert mario.time_left == 400
 assert mario.world == (1, 1)
 last_time = mario.time_left
-
-def train_agent(agent_id, lock):
-    import random
-    import numpy as np
-    random.seed()
-    np.random.seed()
-
-    # Initialize PyBoy instance for this agent
-    pyboy = PyBoy(rom_path, sound=False, window="null")
-    pyboy.set_emulation_speed(0)
-    mario = pyboy.game_wrapper
-    mario.game_area_mapping(mario.mapping_compressed, 0)
-    mario.start_game()
-
-    # Agent-specific variables
-    alpha = 0.5             # Learning rate
-    gamma = 0.9             # Discount factor
-    epsilon = 1.0           # Exploration rate
-    epsilon_min = 0.1
-    epsilon_decay = 0.995
-
-    step = 0
-    episode = 0
-    total_reward = 0
-
-    previous_fitness = fitness_function(mario)
-    state = get_state(mario)
-
-    try:
-        while True:
-            step += 1
-            # Choose an action (epsilon-greedy policy)
-            if random.uniform(0, 1) < epsilon:
-                # Exploration: random action
-                action_index = random.randint(0, len(action_space) - 1)
-            else:
-                # Exploitation: choose the best known action
-                with lock:
-                    q_values = [Q_table.get((state, a), 0) for a in range(len(action_space))]
-                max_q = max(q_values)
-                max_actions = [i for i, q in enumerate(q_values) if q == max_q]
-                action_index = random.choice(max_actions)
-
-            action = action_space[action_index]
-
-            # Press the selected buttons
-            for btn in action:
-                pyboy.button(btn)
-
-            # Advance the game to see the effect of the action
-            pyboy.tick(1 if args.mode == 'play' else 5)
-
-            # Observe new state and reward
-            next_state = get_state(mario)
-            current_fitness = fitness_function(mario)
-            reward = current_fitness - previous_fitness
-            previous_fitness = current_fitness
-
-            if args.mode == 'train':
-                with lock:
-                    # Update Q-table using the Q-learning formula
-                    old_value = Q_table.get((state, action_index), 0)
-                    next_max = max([Q_table.get((next_state, a), 0) for a in range(len(action_space))], default=0)
-                    new_value = old_value + alpha * (reward + gamma * next_max - old_value)
-                    Q_table[(state, action_index)] = new_value
-
-            # Update state
-            state = next_state
-
-            # Decay epsilon
-            if args.mode == 'train':
-                epsilon = max(epsilon_min, epsilon * epsilon_decay)
-
-            # Print current status
-            if step % 1000 == 0:
-                print(f"Agent {agent_id} - Step {step} - Level: {mario.world} - Level Progress: {mario.level_progress} - Fitness: {current_fitness:.2f} - Epsilon: {epsilon:.4f}")
-
-            # Check for game over and reset if necessary
-            if mario.lives_left < 0:
-                # Reset the game
-                mario.reset_game()
-                state = get_state(mario)
-                previous_fitness = fitness_function(mario)
-    except Exception as e:
-        print(f"Agent {agent_id} encountered an error: {e}")
-    finally:
-        pyboy.stop()
 
 # print(mario)
 # Output:
@@ -200,26 +127,74 @@ def fitness_function(mario):
         mario.score / 100  # Small bonus for score (might include coin collection speed)
     )
 
-if __name__ == "__main__":
-    num_processes = multiprocessing.cpu_count()
-    processes = []
-    lock = manager.Lock()
+# Main emulation loop
+step = 0
+try:
+    # Initialize state
+    state = get_state(mario)
+    previous_fitness = fitness_function(mario)
 
-    for i in range(num_processes):
-        p = multiprocessing.Process(target=train_agent, args=(i, lock))
-        processes.append(p)
-        p.start()
+    while True:
+        step += 1
+        # Choose an action (epsilon-greedy policy)
+        if random.uniform(0, 1) < epsilon:
+            # Exploration: random action
+            action_index = random.randint(0, len(action_space) - 1)
+        else:
+            # Exploitation: choose the best known action
+            q_values = [Q_table.get((state, a), 0) for a in range(len(action_space))]
+            max_q = max(q_values)
+            # Handle multiple actions with the same max Q-value
+            max_actions = [i for i, q in enumerate(q_values) if q == max_q]
+            action_index = random.choice(max_actions)
+            # print(f"Q-values: {q_values} - Action: {action_space[action_index]}")
 
-    try:
-        for p in processes:
-            p.join()
-    except KeyboardInterrupt:
-        print("Interrupted by user. Terminating processes...")
-        for p in processes:
-            p.terminate()
-        for p in processes:
-            p.join()
+        action = action_space[action_index]
 
+        # Press the selected buttons
+        for btn in action:
+            pyboy.button(btn)
+
+        # Advance the game to see the effect of the action
+        pyboy.tick(1 if args.mode == 'play' else 5)
+
+        # Observe new state and reward
+        next_state = get_state(mario)
+        current_fitness = fitness_function(mario)
+        reward = current_fitness - previous_fitness
+        previous_fitness = current_fitness
+
+        if args.mode == 'train':
+            # Update Q-table using the Q-learning formula
+            old_value = Q_table.get((state, action_index), 0)
+            next_max = max([Q_table.get((next_state, a), 0) for a in range(len(action_space))], default=0)
+            new_value = old_value + alpha * (reward + gamma * next_max - old_value)
+            Q_table[(state, action_index)] = new_value
+
+        # Update state
+        state = next_state
+
+        # Decay epsilon
+        if args.mode == 'train':
+            epsilon = max(epsilon_min, epsilon * epsilon_decay)
+
+        # Print current status
+        if step % 1000 == 0:
+            print(f"Step {step} - Level: {mario.world} - Level Progress: {mario.level_progress} - Fitness: {current_fitness:.2f} - Epsilon: {epsilon:.4f}")
+
+        # Check for game over and reset if necessary
+        if mario.lives_left < 0:
+            # Reset the game
+            mario.reset_game()
+            state = get_state(mario)
+            previous_fitness = fitness_function(mario)
+except KeyboardInterrupt:
+    print("Emulation interrupted by user.")
+except Exception as e:
+    print(f"An unexpected error occurred: {e}")
+finally:
     if args.mode == 'train':
+        # Save Q-table
         with open('q_table.pkl', 'wb') as f:
-            pickle.dump(dict(Q_table), f)
+            pickle.dump(Q_table, f)
+    pyboy.stop()

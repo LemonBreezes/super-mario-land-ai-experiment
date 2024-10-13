@@ -78,7 +78,6 @@ def get_state(mario):
     # Simplify the state to reduce the state space
     state = (
         int(mario.level_progress / 10),   # Discretize level progress
-        mario.lives_left,
         mario.world[0],                   # World number
         mario.world[1],                   # Level number
     )
@@ -87,9 +86,9 @@ def get_state(mario):
 def fitness_function(mario):
     return (
         mario.level_progress * 10 +  # Prioritize level progress
-        (400 - mario.time_left) * (-10) +  # Reward for using less time (speedrun)
+        (400 - mario.time_left) * (-1) +  # Reward for using less time (speedrun)
         mario.world[0] * 10000 +  # Large bonus for completing worlds
-        mario.world[1] * 1000 +   # Large bonus for completing levels
+        mario.world[1] * 2000 +   # Large bonus for completing levels
         mario.lives_left * 100 +  # Small bonus for remaining lives
         mario.score / 100  # Small bonus for score (might include coin collection speed)
     )

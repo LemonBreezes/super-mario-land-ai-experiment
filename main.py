@@ -128,12 +128,14 @@ def fitness_function(mario):
     )
 
 # Main emulation loop
+step = 0
 try:
     # Initialize state
     state = get_state(mario)
     previous_fitness = fitness_function(mario)
 
     while True:
+        step += 1
         # Choose an action (epsilon-greedy policy)
         if random.uniform(0, 1) < epsilon:
             # Exploration: random action
@@ -174,6 +176,10 @@ try:
         # Decay epsilon
         if args.mode == 'train':
             epsilon = max(epsilon_min, epsilon * epsilon_decay)
+
+        # Print current status
+        if step % 1000 == 0:
+            print(f"Step {step} - Level: {mario.world} - Level Progress: {mario.level_progress} - Fitness: {current_fitness:.2f} - Epsilon: {epsilon:.4f}")
 
         # Check for game over and reset if necessary
         if mario.lives_left < 0:

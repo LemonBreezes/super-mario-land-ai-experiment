@@ -113,16 +113,12 @@ try:
 
         action = action_space[action_index]
 
-        # Clear previous inputs
-        pyboy.send_input(pyboy.buttons.RELEASE)
-
         # Press the selected buttons
         for btn in action:
-            pyboy.send_input(pyboy.buttons[btn.upper()])
+            pyboy.button(btn)
 
         # Advance the game to see the effect of the action
-        for _ in range(5):
-            pyboy.tick()
+        pyboy.tick(5)
 
         # Observe new state and reward
         next_state = get_state(mario)

@@ -28,6 +28,11 @@ gamma = 0.9             # Discount factor
 epsilon = 0.1           # Exploration rate (for epsilon-greedy policy)
 epsilon_min = 0.01      # Minimum exploration rate
 epsilon_decay = 0.995   # Decay rate for epsilon
+
+if args.mode == 'play':
+    epsilon = 0           # Disable exploration in play mode
+    epsilon_min = 0
+    epsilon_decay = 1     # No decay
 rom_path = 'roms/Super Mario Land (World) (Rev A).gb'
 if not rom_path:
     exit()

@@ -118,7 +118,14 @@ def get_state(mario):
     return state
 
 def fitness_function(mario):
-    return mario.level_progress + mario.time_left + mario.world[0] * 1000 + mario.world[1] * 100 + mario.lives_left * 1000
+    return (
+        mario.level_progress * 10 +  # Prioritize level progress
+        (400 - mario.time_left) * 5 +  # Reward for using less time (speedrun)
+        mario.world[0] * 10000 +  # Large bonus for completing worlds
+        mario.world[1] * 1000 +   # Large bonus for completing levels
+        mario.lives_left * 100 +  # Small bonus for remaining lives
+        mario.score / 100  # Small bonus for score (might include coin collection speed)
+    )
 
 # Main emulation loop
 try:

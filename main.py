@@ -7,14 +7,24 @@ import numpy as np
 random.seed()
 np.random.seed()
 import pickle
+import signal
 
 parser = argparse.ArgumentParser(description='Super Mario Land AI')
 parser.add_argument('--mode', choices=['train', 'play'], default='train', help='Mode to run the script: train or play')
 args = parser.parse_args()
 
+def signal_handler(sig, frame):
+    print("Emulation interrupted by user.")
+    if args.mode == 'train':
+        with open('q_table.pkl', 'wb') as f:
+            pickle.dump(Q_table, f)
+    pyboy.stop()
+    exit(0)
+
 # Initialize PyBoy with the selected ROM
 Q_table = {}
 try:
+    signal.signal(signal.SIGINT, signal_handler)
     with open('q_table.pkl', 'rb') as f:
         Q_table = pickle.load(f)
 except FileNotFoundError:
@@ -136,7 +146,8 @@ try:
             pyboy.button(btn)
 
         # Advance the game to see the effect of the action
-        pyboy.tick(5)
+        for _ in range(5):
+            pyboy.tick()
 
         # Observe new state and reward
         next_state = get_state(mario)
@@ -166,6 +177,8 @@ try:
             previous_fitness = fitness_function(mario)
 except KeyboardInterrupt:
     print("Emulation interrupted by user.")
+except Exception as e:
+    print(f"An unexpected error occurred: {e}")
 finally:
     if args.mode == 'train':
         # Save Q-table

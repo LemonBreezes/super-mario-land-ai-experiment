@@ -120,7 +120,7 @@ def get_state(mario):
 def fitness_function(mario):
     return (
         mario.level_progress * 10 +  # Prioritize level progress
-        (400 - mario.time_left) * 5 +  # Reward for using less time (speedrun)
+        (400 - mario.time_left) * (-10) +  # Reward for using less time (speedrun)
         mario.world[0] * 10000 +  # Large bonus for completing worlds
         mario.world[1] * 1000 +   # Large bonus for completing levels
         mario.lives_left * 100 +  # Small bonus for remaining lives
@@ -147,6 +147,7 @@ try:
             # Handle multiple actions with the same max Q-value
             max_actions = [i for i, q in enumerate(q_values) if q == max_q]
             action_index = random.choice(max_actions)
+            # print(f"Q-values: {q_values} - Action: {action_space[action_index]}")
 
         action = action_space[action_index]
 
@@ -155,7 +156,7 @@ try:
             pyboy.button(btn)
 
         # Advance the game to see the effect of the action
-        pyboy.tick(5)
+        pyboy.tick(1 if args.mode == 'play' else 5)
 
         # Observe new state and reward
         next_state = get_state(mario)

@@ -66,9 +66,9 @@ assert mario.world == (1, 1)
 last_time = mario.time_left
 
 action_space = [
-    [],                          # No action
+    # [],                          # No action
     ['right'],                   # Move right
-    ['a'],                       # Jump
+    # ['a'],                       # Jump
     ['right', 'a'],              # Move right and jump
     ['right', 'b'],              # Run right
     ['right', 'b', 'a'],         # Run right and jump
@@ -90,6 +90,7 @@ def fitness_function(mario):
         mario.world[0] * 10000 +  # Large bonus for completing worlds
         mario.world[1] * 2000 +   # Large bonus for completing levels
         mario.lives_left * 100 +  # Small bonus for remaining lives
+        mario.coins * 2 +        # Small bonus for coin collectionn
         mario.score / 100  # Small bonus for score (might include coin collection speed)
     )
 
@@ -113,16 +114,18 @@ try:
             # Handle multiple actions with the same max Q-value
             max_actions = [i for i, q in enumerate(q_values) if q == max_q]
             action_index = random.choice(max_actions)
-            # print(f"Q-values: {q_values} - Action: {action_space[action_index]}")
 
         action = action_space[action_index]
 
         # Press the selected buttons
         for btn in action:
-            pyboy.button(btn)
+            if args.mode == 'train':
+                pyboy.button(btn, 1)
+            elif step % 5 == 0:
+                pyboy.button(btn, 5)
 
         # Advance the game to see the effect of the action
-        pyboy.tick(1 if args.mode == 'play' else 5)
+        pyboy.tick(1)
 
         # Observe new state and reward
         next_state = get_state(mario)
